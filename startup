@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# files can be mapped via a volume to here
+cp nginx.conf /etc/nginx/nginx.conf
+cp app-template.conf /etc/consul-templates/app-template.conf
+
+## remove default server configurations
+rm /etc/nginx/conf.d/default.conf
+rm /etc/nginx/conf.d/example_ssl.conf
+
+# update the template with running deployment
+sed -i "s|::DEPLOYMENT::|${DEPLOYMENT}|g" /etc/consul-templates/app-template.conf
+sed -i "s|::APP::|${APP}|g" /etc/consul-templates/app-template.conf
+
+# Command will
+# 1. Write Consul Template File
+# 2. Start Nginx
+# 3. Start Consul Template
+/usr/sbin/nginx -c /etc/nginx/nginx.conf \
+& CONSUL_TEMPLATE_LOG=debug consul-template \
+  -consul=$CONSUL \
+  -template "$CT_FILE:$NX_FILE:cat /etc/nginx/conf.d/app.conf && /usr/sbin/nginx -s reload";
+
